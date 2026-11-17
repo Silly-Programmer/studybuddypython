@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Results · StudyBuddy{% endblock %}
+{% block content %}
+  {% set pct = (a.score * 100 / a.total) | round | int %}
+  <a href="/quizzes/{{ q.id }}" class="text-sm text-slate-500 hover:underline">← {{ q.title }}</a>
+  <div class="mt-3 rounded-lg border bg-white p-6 text-center">
+    <p class="text-sm text-slate-500">Your score</p>
+    <p class="mt-1 text-4xl font-bold {{ 'text-green-600' if pct >= 70 else 'text-amber-600' if pct >= 40 else 'text-red-600' }}">{{ a.score }} / {{ a.total }}</p>
+    <p class="text-slate-600">{{ pct }}%</p>
+    <a href="/quizzes/{{ q.id }}/take" class="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Try again</a>
+  </div>
+
+  <h2 class="mb-3 mt-8 text-lg font-semibold">Review</h2>
+  <div class="grid gap-4">
+  {% for x in q.questions %}
+    {% set mine = a.answers[loop.index0] %}
+    {% set right = mine == x.correctAnswer %}
+    <div class="rounded-lg border bg-white p-5 {{ 'border-green-300' if right else 'border-red-300' }}">
+      <p class="text-sm text-slate-500">Question {{ loop.index }} · {{ 'Correct' if right else ('Skipped' if mine is none else 'Wrong') }}{% if x.sourcePage %} · page {{ x.sourcePage }}{% endif %}</p>
+      <p class="mt-1 font-medium">{{ x.question }}</p>
+      <ul class="mt-3 grid gap-1.5 text-sm">
+        {% for opt in x.options %}
+          <li class="rounded-md border px-3 py-2 {{ 'border-green-400 bg-green-50' if loop.index0 == x.correctAnswer else 'border-red-300 bg-red-50' if loop.index0 == mine else '' }}">
+            <b>{{ 'ABCD'[loop.index0] }}.</b> {{ opt }}
+            {% if loop.index0 == x.correctAnswer %}<span class="ml-1 text-green-700">✓ correct</span>{% elif loop.index0 == mine %}<span class="ml-1 text-red-700">your answer</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+      <p class="mt-3 text-sm text-slate-600"><b>Why:</b> {{ x.explanation }}</p>
+    </div>
+  {% endfor %}
+  </div>
+{% endblock %}

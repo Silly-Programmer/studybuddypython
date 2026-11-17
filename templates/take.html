@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{{ q.title }} · StudyBuddy{% endblock %}
+{% block content %}
+  <a href="/quizzes/{{ q.id }}" class="text-sm text-slate-500 hover:underline">← Leave quiz</a>
+  <h1 class="mt-2 text-xl font-bold">{{ q.title }}</h1>
+  <div id="quiz" class="mt-4"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+  // Shown one question at a time. Answers are only checked on the server after you submit.
+  const QUESTIONS = {{ questions | tojson }};
+  const answers = Array(QUESTIONS.length).fill(null);
+  let current = 0;
+  const root = document.getElementById("quiz");
+
+  function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+
+  function render() {
+    const q = QUESTIONS[current];
+    root.replaceChildren();
+    const answered = answers.filter((a) => a !== null).length;
+
+    const top = el("div", "mb-4");
+    top.append(el("p", "mb-1 text-sm text-slate-500", `Question ${current + 1} of ${QUESTIONS.length} · ${answered} answered`));
+    const track = el("div", "h-2 overflow-hidden rounded-full bg-slate-200"), fill = el("div", "h-full bg-blue-600 transition-all");
+    fill.style.width = (answered / QUESTIONS.length * 100) + "%"; track.append(fill); top.append(track);
+    root.append(top);
+
+    const card = el("div", "rounded-lg border bg-white p-6");
+    card.append(el("p", "text-lg font-medium", q.question));
+    const list = el("div", "mt-4 grid gap-2");
+    q.options.forEach((opt, i) => {
+      const b = el("button", "flex gap-3 rounded-md border px-4 py-3 text-left text-sm hover:border-blue-500 " + (answers[current] === i ? "border-blue-600 bg-blue-50" : "bg-white"));
+      b.append(el("b", "", "ABCD"[i] + "."), el("span", "", opt));
+      b.onclick = () => { answers[current] = i; render(); };
+      list.append(b);
+    });
+    card.append(list);
+    root.append(card);
+
+    const nav = el("div", "mt-4 flex items-center justify-between gap-3");
+    const prev = el("button", "rounded-md border bg-white px-4 py-2 text-sm disabled:opacity-40", "Previous");
+    prev.disabled = current === 0; prev.onclick = () => { current--; render(); };
+    nav.append(prev);
+    if (current < QUESTIONS.length - 1) {
+      const next = el("button", "rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white", "Next");
+      next.onclick = () => { current++; render(); }; nav.append(next);
+    } else {
+      const submit = el("button", "rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white", "Submit quiz");
+      submit.onclick = submitQuiz; nav.append(submit);
+    }
+    root.append(nav);
+
+    const dots = el("div", "mt-6 flex flex-wrap gap-1.5");   // jump to any question
+    QUESTIONS.forEach((_, i) => {
+      const d = el("button", "h-8 w-8 rounded text-xs " + (i === current ? "bg-blue-600 text-white" : answers[i] !== null ? "bg-blue-100 text-blue-700" : "bg-slate-200 text-slate-600"), String(i + 1));
+      d.onclick = () => { current = i; render(); }; dots.append(d);
+    });
+    root.append(dots);
+    const err = el("p", "mt-3 text-sm text-red-600", ""); err.id = "err"; root.append(err);
+  }
+
+  async function submitQuiz() {
+    const left = answers.filter((a) => a === null).length;
+    if (left && !confirm(`${left} question${left > 1 ? "s are" : " is"} unanswered. Submit anyway?`)) return;
+    try {
+      const d = await api("POST", "/api/quizzes/{{ q.id }}/attempts", { answers });
+      location.href = "/quizzes/{{ q.id }}/attempts/" + d.id;
+    } catch (e) { document.getElementById("err").textContent = e.message; }
+  }
+  render();
+</script>
+{% endblock %}

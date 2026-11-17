@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block content %}
+  <h1 class="text-2xl font-bold">Dashboard</h1>
+  <p class="mt-1 text-slate-600">Upload a PDF, get easy notes, then test yourself with a quiz.</p>
+
+  <div class="mt-6 grid grid-cols-3 gap-3">
+    {% for label, n, href in [('Documents', docs, '/documents'), ('Saved summaries', sums, '/summaries'), ('Saved quizzes', quizzes, '/quizzes')] %}
+      <a href="{{ href }}" class="rounded-lg border bg-white p-4 hover:border-blue-400"><div class="text-2xl font-bold">{{ n }}</div><div class="text-sm text-slate-500">{{ label }}</div></a>
+    {% endfor %}
+  </div>
+
+  <h2 class="mb-3 mt-8 text-lg font-semibold">Upload a PDF</h2>
+  {{ m.upload_box() }}
+
+  <h2 class="mb-3 mt-8 text-lg font-semibold">Recent documents</h2>
+  {% if recent %}
+    <ul class="divide-y rounded-lg border bg-white">
+      {% for d in recent %}
+        <li><a href="/documents/{{ d.id }}" class="flex items-center justify-between gap-3 px-5 py-3 text-sm hover:bg-slate-50">
+          <span class="min-w-0"><span class="block truncate font-medium">{{ d.name }}</span><span class="text-slate-500">{{ d.created_at | fdate }}{% if d.page_count %} · {{ d.page_count }} pages{% endif %}</span></span>
+          {{ m.badge(d.status) }}</a></li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-sm text-slate-500">Nothing yet. Upload your first PDF above.</p>
+  {% endif %}
+{% endblock %}

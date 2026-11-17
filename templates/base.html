@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}StudyBuddy{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+  <style>
+    .prose table { border-collapse: collapse; } .prose th, .prose td { border: 1px solid #e2e8f0; padding: .4rem .7rem; }
+    .prose th { background: #f1f5f9; }
+  </style>
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+{% set nav = [('/', 'Dashboard'), ('/documents', 'My documents'), ('/summaries', 'Saved summaries'), ('/quizzes', 'Saved quizzes')] %}
+<div class="min-h-screen md:flex">
+  <aside class="border-b bg-white md:min-h-screen md:w-60 md:border-b-0 md:border-r">
+    <div class="px-5 py-4 text-lg font-bold text-blue-600">📚 StudyBuddy</div>
+    <nav class="flex gap-1 overflow-x-auto px-3 pb-3 md:flex-col md:pb-0">
+      {% for href, label in nav %}
+        {% set active = request.path == href or (href != '/' and request.path.startswith(href)) %}
+        <a href="{{ href }}" class="whitespace-nowrap rounded-md px-3 py-2 text-sm font-medium {{ 'bg-blue-50 text-blue-700' if active else 'text-slate-600 hover:bg-slate-100' }}">{{ label }}</a>
+      {% endfor %}
+    </nav>
+  </aside>
+  <main class="mx-auto w-full max-w-4xl flex-1 px-5 py-8">{% block content %}{% endblock %}</main>
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

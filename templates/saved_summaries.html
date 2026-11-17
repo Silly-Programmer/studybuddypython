@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% import "_macros.html" as m %}
+{% block content %}
+  <h1 class="text-2xl font-bold">Saved summaries</h1>
+  <p class="mt-1 text-slate-600">Notes you starred with ☆ Save.</p>
+  {% if rows %}
+    <ul class="mt-6 divide-y rounded-lg border bg-white">
+      {% for s in rows %}
+        <li><a href="/summaries/{{ s.id }}" class="flex items-center justify-between gap-3 px-5 py-3 text-sm hover:bg-slate-50">
+          <span class="min-w-0"><span class="block truncate font-medium">{{ s.title }}</span><span class="text-slate-500">{{ s.document_name }} · {{ s.created_at | fdate }}</span></span>{{ m.badge(s.status) }}</a></li>
+      {% endfor %}
+    </ul>
+  {% else %}<p class="mt-6 text-sm text-slate-500">Nothing saved yet. Open a summary and press ☆ Save.</p>{% endif %}
+{% endblock %}
