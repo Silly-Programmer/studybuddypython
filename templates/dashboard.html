@@ -1,28 +1,31 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block content %}
-  <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Ready to study? 👋</h1>
-  <p class="mt-1 text-slate-600">Upload a PDF, get easy notes, then test yourself with a quiz.</p>
+<h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Ready to study?</h1>
+<p class="mt-1 text-slate-600">Upload a PDF, get easy notes, then test yourself with a quiz.</p>
 
-  <div class="mt-6 grid grid-cols-3 gap-2.5 sm:gap-3">
-    {% for label, n, href, ic in [('Documents', docs, '/documents', 'document'), ('Saved notes', sums, '/summaries', 'book'), ('Saved quizzes', quizzes, '/quizzes', 'check')] %}
-      <a href="{{ href }}" class="card p-3.5 hover:border-indigo-300 active:bg-slate-50 sm:p-4">
-        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">{{ m.icon(ic, 'h-5 w-5') }}</span>
-        <div class="mt-3 text-2xl font-bold leading-none">{{ n }}</div>
-        <div class="mt-1 text-xs text-slate-500 sm:text-sm">{{ label }}</div>
-      </a>
-    {% endfor %}
-  </div>
+<div class="mt-6 grid grid-cols-3 gap-2.5 sm:gap-3">
+  {% for label, n, href, ic in [('Documents', docs, '/documents', 'document'), ('Saved notes', sums, '/summaries',
+  'book'), ('Saved quizzes', quizzes, '/quizzes', 'check')] %}
+  <a href="{{ href }}" class="card p-3.5 hover:border-indigo-300 active:bg-slate-50 sm:p-4">
+    <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">{{ m.icon(ic, 'h-5
+      w-5') }}</span>
+    <div class="mt-3 text-2xl font-bold leading-none">{{ n }}</div>
+    <div class="mt-1 text-xs text-slate-500 sm:text-sm">{{ label }}</div>
+  </a>
+  {% endfor %}
+</div>
 
-  <div class="mt-6">{{ m.upload_box() }}</div>
+<div class="mt-6">{{ m.upload_box() }}</div>
 
-  <h2 class="mb-3 mt-8 text-lg font-semibold">Recent documents</h2>
-  {% if recent %}
-    <ul class="list">
-      {% for d in recent %}
-        {{ m.item('/documents/' ~ d.id, d.name, (d.created_at | fdate) ~ (' · ' ~ d.page_count ~ ' pages' if d.page_count else ''), d.status, 'doc:' ~ d.id, d.progress) }}
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p class="text-sm text-slate-500">Nothing yet. Upload your first PDF above.</p>
-  {% endif %}
+<h2 class="mb-3 mt-8 text-lg font-semibold">Recent documents</h2>
+{% if recent %}
+<ul class="list">
+  {% for d in recent %}
+  {{ m.item('/documents/' ~ d.id, d.name, (d.created_at | fdate) ~ (' · ' ~ d.page_count ~ ' pages' if d.page_count else
+  ''), d.status, 'doc:' ~ d.id, d.progress) }}
+  {% endfor %}
+</ul>
+{% else %}
+<p class="text-sm text-slate-500">Nothing yet. Upload your first PDF above.</p>
+{% endif %}
 {% endblock %}
