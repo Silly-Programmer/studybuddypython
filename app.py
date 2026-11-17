@@ -102,6 +102,11 @@ def ai_error(e):
 
 # ---------- pages ----------
 @app.get("/")
+def landing():
+    return app.send_static_file("landing.html")
+
+
+@app.get("/dashboard")
 def dashboard():
     return render_template(
         "dashboard.html",

@@ -13,16 +13,16 @@
   <script src="{{ url_for('static', filename='app.js', v=ASSET_V) }}"></script>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-900 antialiased" {% block bodyattrs %}{% endblock %}>
-{% set nav = [('/', 'Home', 'home'), ('/documents', 'Documents', 'document'), ('/summaries', 'Notes', 'book'), ('/quizzes', 'Quizzes', 'check')] %}
+{% set nav = [('/dashboard', 'Home', 'home'), ('/documents', 'Documents', 'document'), ('/summaries', 'Notes', 'book'), ('/quizzes', 'Quizzes', 'check')] %}
 
 {# phone: slim top bar #}
 <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur md:hidden" style="padding-top: env(safe-area-inset-top)">
-  <a href="/" class="flex h-14 items-center gap-2 px-4 text-lg font-bold text-indigo-600"><span class="text-xl">📚</span> StudyBuddy</a>
+  <a href="/dashboard" class="flex h-14 items-center gap-2 px-4 text-lg font-bold text-indigo-600"><span class="text-xl">📚</span> StudyBuddy</a>
 </header>
 
 {# desktop: sidebar #}
 <aside class="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col border-r border-slate-200 bg-white md:flex">
-  <a href="/" class="flex h-16 items-center gap-2 px-6 text-lg font-bold text-indigo-600"><span class="text-xl">📚</span> StudyBuddy</a>
+  <a href="/dashboard" class="flex h-16 items-center gap-2 px-6 text-lg font-bold text-indigo-600"><span class="text-xl">📚</span> StudyBuddy</a>
   <nav class="flex flex-col gap-1 px-3">
     {% for href, label, ic in nav %}
       {% set active = request.path == href or (href != '/' and request.path.startswith(href)) %}
