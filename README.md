@@ -27,6 +27,18 @@ Keep it on `127.0.0.1` (the default) and don't put it on the internet as it is.
    ```
    Open <http://127.0.0.1:5000>.
 
+## Use it on your phone
+
+The layout is built for phones (bottom tab bar, big tap targets, swipe between quiz questions).
+To open it from your phone while the app runs on your computer:
+
+1. Put both devices on the **same Wi-Fi**.
+2. In `.env` set `HOST=0.0.0.0`, then restart `python app.py`.
+3. On your phone open `http://<your-computer's-IP>:5000` (Windows: `ipconfig`, Mac/Linux: `ifconfig`, look for something like `192.168.1.23`).
+
+There is still no login, so only do this on a network you trust, and set `HOST=127.0.0.1` again afterwards.
+Progress bars update by themselves on every page, and pressing Back always shows fresh data.
+
 ## Backups when the AI is busy (optional)
 
 Set any of these in `.env`. They are tried in this order when the main model is rate limited or down:
@@ -49,7 +61,7 @@ Set any of these in `.env`. They are tried in this order when the main model is 
 | `jobs.py` | Runs the PDF job in the background so the page stays responsive |
 | `db.py` | SQLite (a single file in `data/`) |
 | `config.py` | Every limit in one place (pages, chunk size, questions per page of text, ...) |
-| `templates/`, `static/` | The web pages (HTML + Tailwind from a CDN) and a little JavaScript |
+| `templates/`, `static/` | The web pages (HTML + Tailwind from a CDN), `app.css` (buttons, cards, progress bar) and `app.js` (live progress, upload, dialogs) |
 
 Your files and results live in `data/` (the PDFs in `data/uploads/`, everything else in `data/studybuddy.db`).
 Delete that folder to start fresh.

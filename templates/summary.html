@@ -1,31 +1,33 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}{{ s.title }} · StudyBuddy{% endblock %}
 {% block content %}
-  <a href="/documents/{{ doc.id }}" class="text-sm text-slate-500 hover:underline">← {{ doc.name }}</a>
+  <a href="/documents/{{ doc.id }}" class="inline-flex max-w-full items-center gap-1 text-sm text-slate-500 hover:text-slate-800">{{ m.icon('left', 'h-4 w-4') }}<span class="truncate">{{ doc.name }}</span></a>
   <div class="mt-2 flex flex-wrap items-start justify-between gap-3">
-    <div><h1 class="text-2xl font-bold">{{ s.title }}</h1><p class="mt-1 text-sm text-slate-500">{{ TYPE_LABEL[s.type] }} · {{ s.created_at | fdate }}</p></div>
+    <div class="min-w-0"><h1 class="break-words text-xl font-bold leading-snug sm:text-2xl">{{ s.title }}</h1><p class="mt-1 text-sm text-slate-500">{{ TYPE_LABEL[s.type] }} · {{ s.created_at | fdate }}</p></div>
     {% if s.status == 'done' %}{{ m.actions('/api/summaries', s, '/documents/' ~ doc.id) }}{% endif %}
   </div>
   <div class="mt-6">
   {% if s.status in IN_PROGRESS %}
-    {{ m.progress(s.progress, s.status_detail) }}
+    {{ m.progress('sum:' ~ s.id, s.progress, s.status_detail, 'Writing your notes') }}
   {% elif s.status == 'failed' %}
-    <div class="rounded-lg border border-red-200 bg-red-50 p-5 text-sm text-red-700"><p class="font-medium">The summary could not be created.</p><p class="mt-1">{{ s.error }}</p>
-      <div class="mt-3"><button onclick='removeItem("/api/summaries/{{ s.id }}", {{ s.title | tojson }}, "/documents/{{ doc.id }}")' class="rounded-md bg-white px-3 py-1.5 font-medium text-slate-800 ring-1 ring-slate-300">Delete and try again</button></div></div>
+    <div class="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800"><p class="font-semibold">The notes could not be created.</p><p class="mt-1">{{ s.error }}</p>
+      <button type="button" onclick='removeItem("/api/summaries/{{ s.id }}", {{ s.title | tojson }}, "/documents/{{ doc.id }}")' class="btn btn-ghost btn-sm mt-4">Delete and try again</button></div>
   {% else %}
-    <article id="notes" class="prose prose-slate max-w-none rounded-lg border bg-white p-6"></article>
+    <article id="notes" class="prose prose-slate prose-sm card max-w-none p-4 sm:prose-base sm:p-6"></article>
     <script id="raw" type="application/json">{{ s.content | tojson }}</script>
   {% endif %}
   </div>
 {% endblock %}
 {% block scripts %}
-  {% if s.status in IN_PROGRESS %}<script>watchJob("/api/summaries/{{ s.id }}");</script>
-  {% elif s.status == 'done' %}
+  {% if s.status == 'done' %}
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
   <script>
     // Notes come from the AI, so the HTML is cleaned before it is shown.
-    document.getElementById("notes").innerHTML = DOMPurify.sanitize(marked.parse(JSON.parse(document.getElementById("raw").textContent)));
+    const notes = document.getElementById("notes");
+    notes.innerHTML = DOMPurify.sanitize(marked.parse(JSON.parse(document.getElementById("raw").textContent)));
+    // Wide tables scroll sideways inside their own box instead of stretching the page on a phone.
+    notes.querySelectorAll("table").forEach((t) => { const w = document.createElement("div"); w.className = "table-wrap"; t.replaceWith(w); w.append(t); });
   </script>
   {% endif %}
 {% endblock %}

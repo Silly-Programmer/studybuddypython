@@ -1,32 +1,38 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}Results · StudyBuddy{% endblock %}
 {% block content %}
   {% set pct = (a.score * 100 / a.total) | round | int %}
-  <a href="/quizzes/{{ q.id }}" class="text-sm text-slate-500 hover:underline">← {{ q.title }}</a>
-  <div class="mt-3 rounded-lg border bg-white p-6 text-center">
-    <p class="text-sm text-slate-500">Your score</p>
-    <p class="mt-1 text-4xl font-bold {{ 'text-green-600' if pct >= 70 else 'text-amber-600' if pct >= 40 else 'text-red-600' }}">{{ a.score }} / {{ a.total }}</p>
-    <p class="text-slate-600">{{ pct }}%</p>
-    <a href="/quizzes/{{ q.id }}/take" class="mt-4 inline-block rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">Try again</a>
+  {% set color = '#059669' if pct >= 70 else '#d97706' if pct >= 40 else '#e11d48' %}
+  <a href="/quizzes/{{ q.id }}" class="inline-flex max-w-full items-center gap-1 text-sm text-slate-500 hover:text-slate-800">{{ m.icon('left', 'h-4 w-4') }}<span class="truncate">{{ q.title }}</span></a>
+  <div class="card mt-3 p-6 text-center">
+    <div class="relative mx-auto h-36 w-36">
+      <svg viewBox="0 0 100 100" class="h-full w-full -rotate-90" aria-hidden="true">
+        <circle cx="50" cy="50" r="45" fill="none" stroke="#f1f5f9" stroke-width="9"/>
+        <circle cx="50" cy="50" r="45" fill="none" stroke="{{ color }}" stroke-width="9" stroke-linecap="round" stroke-dasharray="{{ (pct * 2.827) | round(1) }} 282.7"/>
+      </svg>
+      <div class="absolute inset-0 flex flex-col items-center justify-center"><span class="text-3xl font-bold" style="color: {{ color }}">{{ pct }}%</span><span class="text-sm text-slate-500">{{ a.score }} / {{ a.total }}</span></div>
+    </div>
+    <p class="mt-3 font-medium">{{ 'Excellent work! 🎉' if pct >= 85 else 'Nice job, keep going 💪' if pct >= 70 else 'Getting there. Review the answers below 📖' if pct >= 40 else 'Tough one. Check the explanations below and try again 🔁' }}</p>
+    <a href="/quizzes/{{ q.id }}/take" class="btn btn-primary mt-5 w-full sm:w-auto">Try again</a>
   </div>
 
   <h2 class="mb-3 mt-8 text-lg font-semibold">Review</h2>
-  <div class="grid gap-4">
+  <div class="grid gap-3">
   {% for x in q.questions %}
     {% set mine = a.answers[loop.index0] %}
     {% set right = mine == x.correctAnswer %}
-    <div class="rounded-lg border bg-white p-5 {{ 'border-green-300' if right else 'border-red-300' }}">
-      <p class="text-sm text-slate-500">Question {{ loop.index }} · {{ 'Correct' if right else ('Skipped' if mine is none else 'Wrong') }}{% if x.sourcePage %} · page {{ x.sourcePage }}{% endif %}</p>
-      <p class="mt-1 font-medium">{{ x.question }}</p>
+    <div class="card border-l-4 p-4 sm:p-5 {{ 'border-l-emerald-500' if right else 'border-l-rose-500' }}">
+      <p class="text-xs font-medium text-slate-500">Question {{ loop.index }} · <span class="{{ 'text-emerald-600' if right else 'text-rose-600' }}">{{ 'Correct' if right else ('Skipped' if mine is none else 'Wrong') }}</span>{% if x.sourcePage %} · page {{ x.sourcePage }}{% endif %}</p>
+      <p class="mt-1.5 font-medium leading-snug">{{ x.question }}</p>
       <ul class="mt-3 grid gap-1.5 text-sm">
         {% for opt in x.options %}
-          <li class="rounded-md border px-3 py-2 {{ 'border-green-400 bg-green-50' if loop.index0 == x.correctAnswer else 'border-red-300 bg-red-50' if loop.index0 == mine else '' }}">
+          <li class="rounded-xl border px-3 py-2.5 {{ 'border-emerald-400 bg-emerald-50' if loop.index0 == x.correctAnswer else 'border-rose-300 bg-rose-50' if loop.index0 == mine else 'border-slate-200' }}">
             <b>{{ 'ABCD'[loop.index0] }}.</b> {{ opt }}
-            {% if loop.index0 == x.correctAnswer %}<span class="ml-1 text-green-700">✓ correct</span>{% elif loop.index0 == mine %}<span class="ml-1 text-red-700">your answer</span>{% endif %}
+            {% if loop.index0 == x.correctAnswer %}<span class="ml-1 whitespace-nowrap font-medium text-emerald-700">✓ correct</span>{% elif loop.index0 == mine %}<span class="ml-1 whitespace-nowrap font-medium text-rose-700">your answer</span>{% endif %}
           </li>
         {% endfor %}
       </ul>
-      <p class="mt-3 text-sm text-slate-600"><b>Why:</b> {{ x.explanation }}</p>
+      <p class="mt-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-600"><b>Why:</b> {{ x.explanation }}</p>
     </div>
   {% endfor %}
   </div>

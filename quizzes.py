@@ -1,5 +1,6 @@
 """Quizzes: plan how many questions each chunk gives, ask the AI, validate, drop duplicates, top up."""
 import json
+import threading
 import math
 import random
 import re
@@ -204,6 +205,7 @@ def _questions_for_chunk(chunk: dict, need: int, difficulty: str, existing: list
 
 
 def build_quiz(chunks: list[dict], count: int, difficulty: str, on_progress) -> list[dict]:
+    """on_progress(percent, detail) is called every time one part of the document has been finished."""
     lengths = [len(c["content"]) for c in chunks]
     plan = allocate(lengths, count)
     target = sum(plan)
@@ -211,17 +213,28 @@ def build_quiz(chunks: list[dict], count: int, difficulty: str, on_progress) -> 
         raise ai.AIError("This document does not have enough text to make a quiz.")
 
     found: list[tuple[int, dict]] = []  # (chunk index, question)
-    total_steps = sum(1 for n in plan if n > 0) + config.TOP_UP_ROUNDS
+    first_round_parts = sum(1 for n in plan if n > 0)
+    total_steps = first_round_parts + config.TOP_UP_ROUNDS  # top-up rounds only happen when questions were rejected
     done = 0
+    lock = threading.Lock()
 
-    def run_round(round_plan: list[int]):
+    def run_round(round_plan: list[int], first: bool):
         nonlocal done
         jobs = [(i, n) for i, n in enumerate(round_plan) if n > 0]
+        finished_in_round = 0
 
         def work(job):
+            nonlocal done, finished_in_round
             i, n = job
             existing = [q for ci, q in found if ci == i]
-            return i, _questions_for_chunk(chunks[i], n, difficulty, existing)
+            result = i, _questions_for_chunk(chunks[i], n, difficulty, existing)
+            with lock:  # report right away, so the bar moves while the round is still running
+                done += 1
+                finished_in_round += 1
+                detail = (f"Writing questions: part {finished_in_round} of {len(jobs)}" if first
+                          else "Replacing questions that did not pass the checks")
+                on_progress(min(95, round(done / (total_steps + 1) * 100)), detail)
+            return result
 
         with ThreadPoolExecutor(config.AI_CONCURRENCY) as pool:
             results = list(pool.map(work, jobs))
@@ -229,17 +242,16 @@ def build_quiz(chunks: list[dict], count: int, difficulty: str, on_progress) -> 
             for q in qs:
                 if not any(is_duplicate(f[1]["question"], q["question"]) for f in found):
                     found.append((i, q))
-            done += 1
-            on_progress(min(95, round(done / (total_steps + 1) * 100)))
 
-    run_round(plan)
+    run_round(plan, True)
     for _ in range(config.TOP_UP_ROUNDS):
         if len(found) >= target:
             break
-        run_round(allocate(lengths, target - len(found)))
+        run_round(allocate(lengths, target - len(found)), False)
 
     if not found:
         raise ai.AIError("The AI could not write valid questions for this document. Please try again.")
+    on_progress(97, "Checking the questions")
     ordered = sorted(found[:target], key=lambda f: (f[0], f[1]["sourcePage"] or 10**9))
     return [q for _, q in ordered]
 
@@ -257,16 +269,16 @@ def generate_quiz(quiz_id: str) -> None:
         db.update("quizzes", quiz_id, status="generating", progress=1, error=None)
         last = [0.0]
 
-        def progress(percent):
-            if time.time() - last[0] < 1.0:
+        def progress(percent, detail=None):
+            if time.time() - last[0] < 0.4:
                 return
             last[0] = time.time()
-            db.update("quizzes", quiz_id, progress=percent)
+            db.update("quizzes", quiz_id, progress=percent, status_detail=detail)
 
         questions = build_quiz(chunks, quiz["question_count"], quiz["difficulty"], progress)
-        db.update("quizzes", quiz_id, questions=questions, question_count=len(questions), status="done", progress=100)
+        db.update("quizzes", quiz_id, questions=questions, question_count=len(questions), status="done", progress=100, status_detail=None)
     except Exception as e:  # noqa: BLE001
         msg = str(e) if isinstance(e, ai.AIError) else "Could not create the quiz. Please try again."
         if not isinstance(e, ai.AIError):
             print("[quiz] failed:", repr(e))
-        db.update("quizzes", quiz_id, status="failed", error=msg)
+        db.update("quizzes", quiz_id, status="failed", error=msg, status_detail=None)

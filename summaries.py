@@ -105,7 +105,7 @@ def generate_summary(summary_id: str) -> None:
         last = [0.0]
 
         def progress(percent, detail):
-            if time.time() - last[0] < 1.0:
+            if time.time() - last[0] < 0.4:
                 return
             last[0] = time.time()
             db.update("summaries", summary_id, progress=percent, status_detail=detail)

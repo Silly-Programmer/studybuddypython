@@ -25,7 +25,7 @@ create table if not exists quizzes (
   id text primary key, document_id text not null references documents(id) on delete cascade,
   title text not null, difficulty text not null, questions text not null default '[]',
   question_count integer not null default 0, status text not null default 'pending',
-  progress integer not null default 0, error text, saved integer not null default 0,
+  progress integer not null default 0, status_detail text, error text, saved integer not null default 0,
   created_at text not null, updated_at text not null);
 create table if not exists attempts (
   id text primary key, quiz_id text not null references quizzes(id) on delete cascade,
@@ -56,6 +56,10 @@ def init() -> None:
     config.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     with connect() as conn:
         conn.executescript(SCHEMA)
+        # Databases made by an older version: add the column the quiz progress text needs.
+        cols = {r["name"] for r in conn.execute("pragma table_info(quizzes)")}
+        if "status_detail" not in cols:
+            conn.execute("alter table quizzes add column status_detail text")
         # A restart kills background work, so anything still "in progress" can never finish by itself.
         for table in ("documents", "summaries", "quizzes"):
             marks = ",".join("?" * len(IN_PROGRESS))

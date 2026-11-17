@@ -1,14 +1,16 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
+{% block title %}Saved quizzes · StudyBuddy{% endblock %}
 {% block content %}
-  <h1 class="text-2xl font-bold">Saved quizzes</h1>
+  <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Saved quizzes</h1>
   <p class="mt-1 text-slate-600">Quizzes you starred with ☆ Save.</p>
   {% if rows %}
-    <ul class="mt-6 divide-y rounded-lg border bg-white">
+    <ul class="list mt-6">
       {% for q in rows %}
-        <li><a href="/quizzes/{{ q.id }}" class="flex items-center justify-between gap-3 px-5 py-3 text-sm hover:bg-slate-50">
-          <span class="min-w-0"><span class="block truncate font-medium">{{ q.title }}</span>
-            <span class="text-slate-500">{{ q.document_name }} · {{ q.question_count }} questions · {{ q.attempts }} attempt{{ '' if q.attempts == 1 else 's' }}{% if q.best is not none %} · best {{ (q.best * 100) | round | int }}%{% endif %}</span></span>{{ m.badge(q.status) }}</a></li>
+        {% set meta = q.document_name ~ ' · ' ~ q.question_count ~ ' questions · ' ~ q.attempts ~ (' attempt' if q.attempts == 1 else ' attempts') ~ (' · best ' ~ ((q.best * 100) | round | int) ~ '%' if q.best is not none else '') %}
+        {{ m.item('/quizzes/' ~ q.id, q.title, meta, q.status, 'quiz:' ~ q.id, q.progress) }}
       {% endfor %}
     </ul>
-  {% else %}<p class="mt-6 text-sm text-slate-500">Nothing saved yet. Open a quiz and press ☆ Save.</p>{% endif %}
+  {% else %}
+    <div class="card mt-6 p-6 text-center text-sm text-slate-500">Nothing saved yet. Open a quiz and press <b>Save</b>.</div>
+  {% endif %}
 {% endblock %}

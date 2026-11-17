@@ -36,7 +36,34 @@ def status_label(s: str) -> str:
     return STATUS_LABEL.get(s, s)
 
 
-app.jinja_env.globals.update(TYPE_LABEL=summaries.TYPE_LABEL, IN_PROGRESS=db.IN_PROGRESS)
+def _asset_version() -> int:
+    """Changes whenever a file in static/ changes, so phones never keep an old app.js or app.css."""
+    return int(max((f.stat().st_mtime for f in (config.BASE_DIR / "static").glob("*") if f.is_file()), default=0))
+
+
+app.jinja_env.globals.update(TYPE_LABEL=summaries.TYPE_LABEL, IN_PROGRESS=db.IN_PROGRESS,
+                             MAX_MB=config.MAX_PDF_BYTES // 1024 // 1024, ASSET_V=_asset_version())
+
+
+@app.after_request
+def never_cache_pages(resp):
+    """Pages and API answers always come fresh from the server. Without this the browser's Back button
+    shows an old copy of the page (for example a progress bar frozen at 1%)."""
+    if not request.path.startswith("/static/"):
+        resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+def status_payload(row: dict) -> dict:
+    """What the browser needs to draw a progress bar or a status badge, the same shape for every kind of job."""
+    s = row["status"]
+    return {"id": row["id"], "status": s, "label": STATUS_LABEL.get(s, s),
+            "tone": "green" if s in ("ready", "done") else "red" if s == "failed" else "amber",
+            "active": s in db.IN_PROGRESS, "progress": row.get("progress") or 0,
+            "status_detail": row.get("status_detail"), "error": row.get("error")}
+
+
+STATUS_COLUMNS = "id, status, progress, status_detail, error"
 
 
 def fail(message: str, code: int = 400):
@@ -155,6 +182,23 @@ def attempt_page(qid, aid):
     return render_template("attempt.html", q=q, a=a)
 
 
+# ---------- API: live status of many things at once ----------
+@app.get("/api/status")
+def batch_status():
+    """GET /api/status?doc=<id>&sum=<id>&quiz=<id> (repeat a name for more ids).
+    Every page polls this one URL, so a list with five running jobs still costs a single request."""
+    tables = {"doc": "documents", "sum": "summaries", "quiz": "quizzes"}
+    out = {}
+    for kind, table in tables.items():
+        ids = [i for i in request.args.getlist(kind) if re.fullmatch(r"[0-9a-f]{32}", i)][:50]
+        if not ids:
+            continue
+        marks = ",".join("?" * len(ids))
+        for row in db.query(f"select {STATUS_COLUMNS} from {table} where id in ({marks})", tuple(ids)):
+            out[f"{kind}:{row['id']}"] = status_payload(row)
+    return jsonify(out)
+
+
 # ---------- API: documents ----------
 @app.post("/api/documents")
 def upload_document():
@@ -181,8 +225,7 @@ def upload_document():
 
 @app.get("/api/documents/<doc_id>")
 def document_status(doc_id):
-    d = get_or_404("documents", doc_id)
-    return jsonify({k: d[k] for k in ("id", "status", "progress", "status_detail", "page_count", "error")})
+    return jsonify({**status_payload(get_or_404("documents", doc_id))})
 
 
 @app.post("/api/documents/<doc_id>/retry")
@@ -225,8 +268,7 @@ def create_summary(doc_id):
 
 @app.get("/api/summaries/<sid>")
 def summary_status(sid):
-    s = get_or_404("summaries", sid)
-    return jsonify({k: s[k] for k in ("id", "status", "progress", "status_detail", "error")})
+    return jsonify(status_payload(get_or_404("summaries", sid)))
 
 
 # ---------- API: quizzes ----------
@@ -260,8 +302,7 @@ def create_quiz(doc_id):
 
 @app.get("/api/quizzes/<qid>")
 def quiz_status(qid):
-    q = get_or_404("quizzes", qid)
-    return jsonify({k: q[k] for k in ("id", "status", "progress", "error")})
+    return jsonify(status_payload(get_or_404("quizzes", qid)))
 
 
 @app.post("/api/quizzes/<qid>/attempts")

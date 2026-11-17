@@ -22,8 +22,8 @@ def process_document(doc_id: str) -> None:
 
         def progress(stage, percent, detail, page_count=None):
             now = time.time()
-            if stage == state["stage"] and page_count is None and now - state["at"] < 1.0:
-                return  # do not write to the database on every page
+            if stage == state["stage"] and page_count is None and now - state["at"] < 0.4:
+                return  # do not write to the database on every single page
             state.update(stage=stage, at=now)
             extra = {"page_count": page_count} if page_count else {}
             db.update("documents", doc_id, status=stage, progress=percent, status_detail=detail, **extra)

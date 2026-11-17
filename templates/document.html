@@ -1,91 +1,87 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block title %}{{ doc.name }} · StudyBuddy{% endblock %}
 {% block content %}
-  <a href="/documents" class="text-sm text-slate-500 hover:underline">← My documents</a>
+  <a href="/documents" class="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">{{ m.icon('left', 'h-4 w-4') }}Documents</a>
   <div class="mt-2 flex items-start justify-between gap-3">
     <div class="min-w-0">
-      <h1 class="break-words text-2xl font-bold">{{ doc.name }}</h1>
+      <h1 class="break-words text-xl font-bold leading-snug sm:text-2xl">{{ doc.name }}</h1>
       <p class="mt-1 text-sm text-slate-500">{{ doc.created_at | fdate }} · {{ doc.size_bytes | fsize }}{% if doc.page_count %} · {{ doc.page_count }} pages{% endif %}</p>
     </div>
-    <button onclick='removeItem("/api/documents/{{ doc.id }}", {{ doc.name | tojson }}, "/documents")' class="shrink-0 rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm text-red-600 hover:bg-red-50">Delete</button>
+    <button type="button" aria-label="Delete document" onclick='removeItem("/api/documents/{{ doc.id }}", {{ doc.name | tojson }}, "/documents")' class="btn btn-ghost is-danger btn-sm !px-3">{{ m.icon('trash', 'h-5 w-5') }}</button>
   </div>
 
   <div class="mt-6">
   {% if doc.status in IN_PROGRESS %}
-    {{ m.progress(doc.progress, doc.status_detail) }}
+    {{ m.progress('doc:' ~ doc.id, doc.progress, doc.status_detail, 'Reading your PDF') }}
   {% elif doc.status == 'failed' %}
-    <div class="rounded-lg border border-red-200 bg-red-50 p-5 text-sm text-red-700">
-      <p class="font-medium">This PDF could not be processed.</p><p class="mt-1">{{ doc.error }}</p>
-      <button onclick="retryDocument('{{ doc.id }}')" class="mt-3 rounded-md bg-white px-3 py-1.5 font-medium text-slate-800 ring-1 ring-slate-300 hover:bg-slate-50">Try again</button>
+    <div class="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
+      <p class="font-semibold">This PDF could not be processed.</p><p class="mt-1">{{ doc.error }}</p>
+      <button type="button" onclick="retryDocument('{{ doc.id }}', this)" class="btn btn-ghost btn-sm mt-4">{{ m.icon('retry', 'h-4 w-4') }}Try again</button>
     </div>
   {% else %}
     {% if doc.ocr_pages %}
-      <div class="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+      <div class="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
         {{ doc.ocr_pages }} {{ 'page was a scanned image' if doc.ocr_pages == 1 else 'pages were scanned images' }} and read with OCR. Handwriting and blurry scans may contain small reading mistakes.
       </div>
     {% endif %}
 
+    {% set sum_desc = {'quick': 'Overview, key points and exam tips', 'detailed': 'Full notes, nothing important left out', 'chapter': 'Grouped by chapter or topic', 'qa': 'Exam-style questions with answers'} %}
     <h2 class="mb-3 text-lg font-semibold">Create notes</h2>
-    <div class="grid gap-2 sm:grid-cols-2">
+    <div class="grid gap-2.5 sm:grid-cols-2">
       {% for key, label in summary_types.items() %}
-        <button onclick="makeSummary('{{ key }}', this)" class="rounded-lg border bg-white px-4 py-3 text-left text-sm font-medium hover:border-blue-500 hover:bg-blue-50 disabled:opacity-60">{{ label }}</button>
+        <button type="button" onclick="makeSummary('{{ key }}', this)" class="card flex min-h-[4.25rem] items-center gap-3 p-4 text-left hover:border-indigo-400 active:bg-indigo-50 disabled:opacity-60">
+          <span class="min-w-0 flex-1"><span class="block font-semibold">{{ label }}</span><span class="mt-0.5 block text-xs text-slate-500">{{ sum_desc.get(key, '') }}</span></span>
+          {{ m.icon('right', 'h-4 w-4 text-slate-300') }}
+        </button>
       {% endfor %}
     </div>
-    <p id="sum-error" role="alert" class="mt-2 text-sm text-red-600"></p>
+    <p id="sum-error" role="alert" class="mt-2 text-sm font-medium text-rose-600"></p>
 
-    <h2 class="mb-3 mt-10 text-lg font-semibold">Your summaries</h2>
+    <h2 class="mb-3 mt-9 text-lg font-semibold">Your notes</h2>
     {% if summaries %}
-      <ul class="divide-y rounded-lg border bg-white">
+      <ul class="list">
         {% for s in summaries %}
-          <li class="flex items-center gap-2 pr-3">
-            <a href="/summaries/{{ s.id }}" class="flex min-w-0 flex-1 items-center justify-between gap-3 px-5 py-3 text-sm hover:bg-slate-50">
-              <span class="min-w-0"><span class="block truncate font-medium">{{ s.title }}</span><span class="text-slate-500">{{ s.created_at | fdate }}{{ ' · Saved' if s.saved }}</span></span>{{ m.badge(s.status) }}</a>
-            <button title="Delete" onclick='removeItem("/api/summaries/{{ s.id }}", {{ s.title | tojson }})' class="rounded-md px-2 py-1 text-slate-400 hover:bg-red-50 hover:text-red-600">🗑</button>
-          </li>
+          {{ m.item('/summaries/' ~ s.id, s.title, (s.created_at | fdate) ~ (' · Saved' if s.saved else ''), s.status, 'sum:' ~ s.id, s.progress, '/api/summaries/' ~ s.id) }}
         {% endfor %}
       </ul>
     {% else %}<p class="text-sm text-slate-500">Nothing yet. Pick an option above to create your first notes.</p>{% endif %}
 
-    <h2 class="mb-3 mt-10 text-lg font-semibold">Test yourself</h2>
+    <h2 class="mb-3 mt-9 text-lg font-semibold">Test yourself</h2>
     {% if not count_options %}
-      <div class="rounded-lg border border-dashed bg-white p-5 text-sm text-slate-500">This document is too short to make a quiz. Upload a longer PDF to test yourself.</div>
+      <div class="rounded-2xl border border-dashed border-slate-300 bg-white p-5 text-sm text-slate-500">This document is too short to make a quiz. Upload a longer PDF to test yourself.</div>
     {% else %}
-      <div class="grid gap-5 rounded-lg border bg-white p-5">
+      <div class="card grid gap-5 p-4 sm:p-5">
         <div>
           <p class="mb-2 text-sm font-medium">Number of questions</p>
           <div class="flex flex-wrap gap-2">
             {% for n in count_options %}
               <label><input type="radio" name="count" value="{{ n }}" class="peer sr-only" {{ 'checked' if n == (default_count if default_count in count_options else count_options[-1]) }}>
-              <span class="block cursor-pointer rounded-md border px-4 py-2 text-sm font-medium hover:border-blue-500 peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-700">{{ n }}</span></label>
+              <span class="flex h-11 min-w-[3.25rem] cursor-pointer items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-semibold hover:border-indigo-400 peer-checked:border-indigo-600 peer-checked:bg-indigo-50 peer-checked:text-indigo-700 peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-400">{{ n }}</span></label>
             {% endfor %}
           </div>
         </div>
         <div>
           <p class="mb-2 text-sm font-medium">Difficulty</p>
           <div class="grid gap-2 sm:grid-cols-3">
-            {% for v, t in [('Easy','Key definitions and facts'),('Medium','Understanding and application'),('Hard','Reasoning with close options')] %}
+            {% for v, t in [('Easy', 'Key definitions and facts'), ('Medium', 'Understanding and application'), ('Hard', 'Reasoning with close options')] %}
               <label><input type="radio" name="difficulty" value="{{ v }}" class="peer sr-only" {{ 'checked' if v == 'Medium' }}>
-              <span class="block cursor-pointer rounded-md border px-4 py-2 text-sm hover:border-blue-500 peer-checked:border-blue-600 peer-checked:bg-blue-50"><b class="block">{{ v }}</b><span class="text-xs text-slate-500">{{ t }}</span></span></label>
+              <span class="block min-h-[3rem] cursor-pointer rounded-xl border border-slate-200 px-4 py-2.5 text-sm hover:border-indigo-400 peer-checked:border-indigo-600 peer-checked:bg-indigo-50 peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-400"><b class="block">{{ v }}</b><span class="text-xs text-slate-500">{{ t }}</span></span></label>
             {% endfor %}
           </div>
         </div>
-        <div class="flex flex-wrap items-center gap-3">
-          <button id="quiz-btn" onclick="makeQuiz()" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">Create quiz</button>
-          <p class="text-sm text-slate-500">{{ 'This document has enough material for up to %d questions. Longer documents allow more.' % capacity if capacity < 30 else 'Questions cover the whole document and show the page each answer comes from.' }}</p>
+        <div>
+          <button id="quiz-btn" type="button" onclick="makeQuiz()" class="btn btn-primary w-full sm:w-auto">Create quiz</button>
+          <p class="mt-3 text-xs text-slate-500 sm:text-sm">{{ 'This document has enough material for up to %d questions. Longer documents allow more.' % capacity if capacity < 30 else 'Questions cover the whole document and show the page each answer comes from.' }}</p>
+          <p id="quiz-error" role="alert" class="mt-2 text-sm font-medium text-rose-600"></p>
         </div>
-        <p id="quiz-error" role="alert" class="text-sm text-red-600"></p>
       </div>
     {% endif %}
 
-    <h2 class="mb-3 mt-10 text-lg font-semibold">Your quizzes</h2>
+    <h2 class="mb-3 mt-9 text-lg font-semibold">Your quizzes</h2>
     {% if quizzes %}
-      <ul class="divide-y rounded-lg border bg-white">
+      <ul class="list">
         {% for q in quizzes %}
-          <li class="flex items-center gap-2 pr-3">
-            <a href="/quizzes/{{ q.id }}" class="flex min-w-0 flex-1 items-center justify-between gap-3 px-5 py-3 text-sm hover:bg-slate-50">
-              <span class="min-w-0"><span class="block truncate font-medium">{{ q.difficulty }} quiz{{ ' · %d questions' % q.question_count if q.status == 'done' }}</span><span class="text-slate-500">{{ q.created_at | fdate }}{{ ' · Saved' if q.saved }}</span></span>{{ m.badge(q.status) }}</a>
-            <button title="Delete" onclick='removeItem("/api/quizzes/{{ q.id }}", {{ q.title | tojson }})' class="rounded-md px-2 py-1 text-slate-400 hover:bg-red-50 hover:text-red-600">🗑</button>
-          </li>
+          {{ m.item('/quizzes/' ~ q.id, q.difficulty ~ ' quiz' ~ (' · ' ~ q.question_count ~ ' questions' if q.status == 'done' else ''), (q.created_at | fdate) ~ (' · Saved' if q.saved else ''), q.status, 'quiz:' ~ q.id, q.progress, '/api/quizzes/' ~ q.id, q.title) }}
         {% endfor %}
       </ul>
     {% else %}<p class="text-sm text-slate-500">Nothing yet. Choose the number of questions and a difficulty above to create your first quiz.</p>{% endif %}
@@ -95,19 +91,19 @@
 
 {% block scripts %}
 <script>
-  {% if doc.status in IN_PROGRESS %}watchJob("/api/documents/{{ doc.id }}");{% endif %}
   async function makeSummary(type, btn) {
-    btn.disabled = true; document.getElementById("sum-error").textContent = "";
+    document.querySelectorAll("[onclick^=makeSummary]").forEach((b) => (b.disabled = true));
+    document.getElementById("sum-error").textContent = "";
     try { const d = await api("POST", "/api/documents/{{ doc.id }}/summaries", { type }); location.href = "/summaries/" + d.id; }
-    catch (e) { document.getElementById("sum-error").textContent = e.message; btn.disabled = false; }
+    catch (e) { document.getElementById("sum-error").textContent = e.message; document.querySelectorAll("[onclick^=makeSummary]").forEach((b) => (b.disabled = false)); }
   }
   async function makeQuiz() {
     const btn = document.getElementById("quiz-btn"), err = document.getElementById("quiz-error");
-    btn.disabled = true; err.textContent = "";
-    const count = Number(document.querySelector('input[name=count]:checked').value);
-    const difficulty = document.querySelector('input[name=difficulty]:checked').value;
+    btn.disabled = true; btn.textContent = "Starting…"; err.textContent = "";
+    const count = Number(document.querySelector("input[name=count]:checked").value);
+    const difficulty = document.querySelector("input[name=difficulty]:checked").value;
     try { const d = await api("POST", "/api/documents/{{ doc.id }}/quizzes", { count, difficulty }); location.href = "/quizzes/" + d.id; }
-    catch (e) { err.textContent = e.message; btn.disabled = false; }
+    catch (e) { err.textContent = e.message; btn.disabled = false; btn.textContent = "Create quiz"; }
   }
 </script>
 {% endblock %}

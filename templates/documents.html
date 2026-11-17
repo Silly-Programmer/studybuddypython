@@ -1,16 +1,11 @@
 {% extends "base.html" %}{% import "_macros.html" as m %}
 {% block content %}
-  <h1 class="text-2xl font-bold">My documents</h1>
-  <div class="mt-6">{{ m.upload_box() }}</div>
+  <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Documents</h1>
+  <div class="mt-5">{{ m.upload_box() }}</div>
   {% if docs %}
-    <ul class="mt-6 divide-y rounded-lg border bg-white">
+    <ul class="list mt-6">
       {% for d in docs %}
-        <li class="flex items-center gap-2 pr-3">
-          <a href="/documents/{{ d.id }}" class="flex min-w-0 flex-1 items-center justify-between gap-3 px-5 py-3 text-sm hover:bg-slate-50">
-            <span class="min-w-0"><span class="block truncate font-medium">{{ d.name }}</span><span class="text-slate-500">{{ d.created_at | fdate }} · {{ d.size_bytes | fsize }}{% if d.page_count %} · {{ d.page_count }} pages{% endif %}</span></span>
-            {{ m.badge(d.status) }}</a>
-          <button title="Delete" onclick='removeItem("/api/documents/{{ d.id }}", {{ d.name | tojson }})' class="rounded-md px-2 py-1 text-slate-400 hover:bg-red-50 hover:text-red-600">🗑</button>
-        </li>
+        {{ m.item('/documents/' ~ d.id, d.name, (d.created_at | fdate) ~ ' · ' ~ (d.size_bytes | fsize) ~ (' · ' ~ d.page_count ~ ' pages' if d.page_count else ''), d.status, 'doc:' ~ d.id, d.progress, '/api/documents/' ~ d.id) }}
       {% endfor %}
     </ul>
   {% else %}
